@@ -33,15 +33,11 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
         accuracy (float): Accuracy of the model on the test set.
     
     """
-    # Split the data into features and labels
     X = df.drop(columns=['label'])
     y = df['label']
-    
-    # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=y, random_state=random_state)
 
     # Train the initial Random Forest classifier
-        # Train the Random Forest classifier
     rf_classifier = RandomForestClassifier(
         n_estimators=100,
         max_depth=None,
@@ -53,7 +49,7 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
 
     rf_classifier.fit(X_train, y_train)
 
-    # Evaluate the model
+    # Evaluate the model - for initial testing
     y_pred = rf_classifier.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
@@ -72,7 +68,6 @@ def get_feature_importance(model, df):
         fig (plt.Figure): Figure object containing the feature importance plot.
         feature_importance (pd.DataFrame): DataFrame containing feature importances sorted by importance.
     """
-    # Get feature importances
     importances = model.feature_importances_
     
     # Create a DataFrame for better visualization
@@ -80,8 +75,6 @@ def get_feature_importance(model, df):
         'Feature': df.columns[:-1],
         'Importance': importances
     })
-    
-    # Sort by importance
     feature_importance = feature_importance.sort_values('Importance', ascending=False)
    
     # Plot feature importance
@@ -96,4 +89,104 @@ def get_feature_importance(model, df):
     return fig, feature_importance
 
 
-def 
+def get_max_safe_folds(df, min_samples_per_fold=100):
+    """
+    Get the maximum number of safe folds for cross-validation based on the dataset.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the dataset with features and labels.
+
+    Returns:
+        max_safe_folds (int): Maximum number of safe folds for cross-validation.
+    """
+
+    class_counts = df['label'].value_counts()
+    rarest_class_count = class_counts.min()
+    max_folds = rarest_class_count // min_samples_per_fold
+    
+    if max_folds < 3:
+        print(f"Class counts: {class_counts}")
+        raise ValueError(f"Not enough samples in the rarest class to create {min_samples_per_fold} samples per fold.")
+    else:
+        print(f"Class counts: {class_counts}")
+        print(f"Max recommended folds: {max_folds}")
+        max_safe_folds = max_folds
+    
+    return max_safe_folds, class_counts
+
+
+def tune_hyperparameters(X, y, max_safe_folds):
+    """
+    Tune hyperparameters for the Random Forest classifier using GridSearchCV.
+    
+    Args:
+        X (pd.DataFrame): Training features.
+        y (pd.Series): Training labels.
+
+    Returns:
+        best_model (RandomForestClassifier): Best Random Forest classifier after hyperparameter tuning.
+        best_params (dict): Best hyperparameters found during tuning.
+    """
+    # Define the parameter grid
+    param_grid = {
+        'n_estimators': [100, 200],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5],
+        'min_samples_leaf': [1, 2]
+    }
+
+    rf_classifier = RandomForestClassifier(random_state=42, n_jobs=-1)
+    k_fold_cv = StratifiedKFold(n_splits=max_safe_folds, shuffle=True, random_state=42)
+    grid_search = GridSearchCV(estimator=rf_classifier, param_grid=param_grid, cv=k_fold_cv, scoring='balanced_accuracy', n_jobs=-1, verbose=1)
+    grid_search.fit(X, y)
+
+    # Get the best model and parameters
+    best_model = grid_search.best_estimator_
+    best_params = grid_search.best_params_
+    print("Best Hyperparameters:")
+    print(best_params)
+
+    return best_model, best_params, grid_search.cv_results_
+
+
+def evaluate_best_model(best_model, X_test, y_test, plot_confusion_matrix=True):
+    """
+    Evaluate the trained model using various metrics.
+
+    Args:
+        best_model (RandomForestClassifier): Trained Random Forest classifier.
+        X_test (pd.DataFrame): Testing features.
+        y_test (pd.Series): Testing labels.
+    
+    Returns:
+        metrics (dict): Dictionary of evaluation metrics:
+            accuracy (float): Accuracy of the model on the test set.
+            confusion_mat (np.ndarray): Confusion matrix.
+            classification_rep (str): Classification report as a string.
+
+    """
+    y_pred = best_model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    confusion_matrix = confusion_matrix(y_test, y_pred)
+    classification_rep = classification_report(y_test, y_pred)
+
+    print(f"Accuracy: {accuracy:.4f}")
+    print("\n Classification Report: \n")
+    print(classification_rep)
+
+    if plot_confusion_matrix:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', ax=ax)
+        ax.set_title('Confusion Matrix')
+        ax.set_xlabel('Predicted Label')
+        ax.set_ylabel('True Label')
+        plt.tight_layout()
+        plt.show()
+
+    metrics = {
+        'accuracy': accuracy,
+        'confusion_matrix': confusion_matrix,
+        'classification_report': classification_rep
+    }
+
+    return metrics
