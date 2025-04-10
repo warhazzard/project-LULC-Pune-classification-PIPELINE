@@ -77,7 +77,7 @@ def reproject(file, projection):
 
 
 
-def load_raster_data(raster_file_path: str) -> rioxarray.DataArray:
+def load_raster_data(raster_file_path: str):
     """
     Load the input data. 
 
@@ -105,7 +105,7 @@ def load_raster_data(raster_file_path: str) -> rioxarray.DataArray:
     return raster_ds
 
 
-def load_training_data( training_data: str) -> gpd.GeoDataFrame:
+def load_training_data( training_data: str):
     """
     Load the training data. 
 
