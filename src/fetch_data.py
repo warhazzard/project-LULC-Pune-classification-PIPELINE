@@ -12,7 +12,6 @@ def authenticate_gee():
         ee.Initialize(project='ee-hazzard')
 
 
-# Function to get image projection information
 def get_image_projection_info(image):
     """
     Prints the native projection, CRS, and nominal scale of an ee.Image.
@@ -28,7 +27,6 @@ def get_image_projection_info(image):
     print(f"🔹 Nominal Scale: {scale} meters per pixel")
 
 
-# Function to filter and preprocess image collection
 def filter_image_collection(imageCollection, csPlusImgCollection, dateFilter, roi, cloudFilter, qa_band, clear_threshold):
     """
     Filter and preprocess the image collection.
@@ -56,7 +54,6 @@ def filter_image_collection(imageCollection, csPlusImgCollection, dateFilter, ro
     return filtered_image
 
 
-# Function to create image composites
 def create_image_composite(imageCollection):
     """
     Create a composite image from the filtered image collection.
@@ -67,10 +64,11 @@ def create_image_composite(imageCollection):
     Returns:
         ee.Image: The composite image.
     """
-    return imageCollection.select('B.*').median()
+    # return imageCollection.select('B.*').median()
+    bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B9', 'B11', 'B12']
+    return imageCollection.select(bands).median()
 
 
-# Function to remove outliers using clamping with 1-99 percentiles
 def clamp_img(image, roi):
     """
     Removes outliers from an image by clamping each band to its 1st and 99th percentiles.
@@ -146,17 +144,19 @@ def export_image_to_drive(image, region, description, folder, file_name_prefix, 
         crs (str): Coordinate Reference System.
         max_pixels (int): Max pixels allowed.
     """
+    image_select = image.select(['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B9', 'B11', 'B12'])
+
     task = ee.batch.Export.image.toDrive(
-        image=image,
+        image=image_select,
         description=description,
         folder=folder,
         fileNamePrefix=file_name_prefix,
-        scale=scale,
+        # scale=scale,
+        scale=image_select.projection().nominalScale(),
         region=region,
         crs=crs,
         maxPixels=max_pixels,
         fileFormat='GeoTIFF',
-        formatOptions={'cloudOptimized': True}
         )
     
     task.start()
@@ -203,13 +203,13 @@ def main():
     clampedImage2024 = clamp_img(imgComp2024, roi)
 
     # Resample images to 10m resolution
-    band_list = ['B1', 'B5', 'B6', 'B7', 'B8A', 'B9', 'B11', 'B12']
+    # band_list = ['B1', 'B5', 'B6', 'B7', 'B8A', 'B9', 'B11', 'B12']
     # resampledImage2019 = resample_image_to_10m(clampedImage2019, band_list)
     # resampledImage2024 = resample_image_to_10m(clampedImage2024, band_list)
 
     # Export images to Google Drive
-    export_image_to_drive(clampedImage2019, roi, 'clampedImage2019', 'Sentinel2_Images-3', 'clampedImage2019')
-    export_image_to_drive(clampedImage2024, roi, 'clampedImage2024', 'Sentinel2_Images-3', 'clampedImage2024')
+    export_image_to_drive(clampedImage2019, roi, 'year composite 2019', 'GEE_Exports/native', 'img_2019')
+    export_image_to_drive(clampedImage2024, roi, 'year composite 2024', 'GEE_Exports/native', 'img_2024')
     print("Export tasks started. Check your Google Drive for the images.")
 
 if __name__ == "__main__":

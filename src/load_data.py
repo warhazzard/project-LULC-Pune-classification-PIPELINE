@@ -10,6 +10,29 @@ import rioxarray
 xr.set_options(keep_attrs=True, display_expand_data=True)
 
 
+def remove_extra_bands(input_path, output):
+  """
+  Remove extra bands from a raster file and save it as a new file.
+  
+    Args:
+        input_path (str): Path to the input raster file.
+        output (str): Path to save the output raster file.
+    Outputs:
+        Raster file with 12 bands.
+  """
+  with rasterio.open(input_path) as src:
+      meta = src.meta.copy()
+      meta.update(count=12)
+
+      with rasterio.open(output, "w", **meta) as dst:
+          for i in range(1, 13):
+              band = src.read(i)
+              dst.write(band, i)
+  print('Done')
+  
+  return None
+
+
 def mosaic_rasters(*raster_files, output_file_path='mosaic.tif'):
     """
     Mosaics multiple raster files into a single raster.
@@ -51,7 +74,7 @@ def mosaic_rasters(*raster_files, output_file_path='mosaic.tif'):
     except Exception as e:
         raise RuntimeError(f"Error during raster mosaicking: {e}")
 
-    return output_file_path
+    return None
 
 
 def reproject(file, projection):
