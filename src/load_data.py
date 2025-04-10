@@ -2,11 +2,57 @@ import os
 import pandas as pd
 import numpy as np
 import rasterio
+from rasterio.merge import merge
 import geopandas as gpd
 import xarray as xr
 import rioxarray 
 
 xr.set_options(keep_attrs=True, display_expand_data=True)
+
+
+def mosaic_rasters(*raster_files, output_file_path='mosaic.tif'):
+    """
+    Mosaics multiple raster files into a single raster.
+
+    Args:
+        raster_files: List of paths to raster files - GeoTiff.
+        output_file_path: Path to save the mosaiced raster.
+    
+    Returns:
+        Mosaiced raster as GeoTiff.
+    """
+    if not all(isinstance(file, str) for file in raster_files):
+        raise TypeError("All raster files must be strings")
+    
+    if not all(os.path.exists(file) for file in raster_files):
+        raise FileNotFoundError("One or more raster files do not exist")
+
+    try:
+        # Open all rasters and merge them
+        src_files_to_mosaic = [rasterio.open(fp) for fp in raster_files]
+        mosaic, out_transform = merge(src_files_to_mosaic)
+
+        # Copy metadata from first file to update mosaic's metadata
+        out_meta = src_files_to_mosaic[0].meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": mosaic.shape[1],
+            "width": mosaic.shape[2],
+            "transform": out_transform,
+            "count": mosaic.shape[0]
+        })
+
+        # Write mosaicked raster to output_file_path and close the files
+        with rasterio.open(output_file_path, "w", **out_meta) as dest:
+            dest.write(mosaic)
+        for src in src_files_to_mosaic:
+            src.close()
+
+    except Exception as e:
+        raise RuntimeError(f"Error during raster mosaicking: {e}")
+
+    return output_file_path
+
 
 def reproject(file, projection):
     """
@@ -93,19 +139,19 @@ def load_training_data( training_data: str) -> gpd.GeoDataFrame:
     return gdf, class_col
 
 
-def visualize_data(raster_ds1, raster_ds2, gdf):
-    """
-    Visualize the raster data and training data.
+# def visualize_data(raster_ds1, raster_ds2, gdf):
+#     """
+#     Visualize the raster data and training data.
 
-    Args:
-        raster_ds1 (rioxarray.DataArray): First raster dataset.
-        raster_ds2 (rioxarray.DataArray): Second raster dataset.
-        gdf (gpd.GeoDataFrame): GeoDataFrame containing training data.
+#     Args:
+#         raster_ds1 (rioxarray.DataArray): First raster dataset.
+#         raster_ds2 (rioxarray.DataArray): Second raster dataset.
+#         gdf (gpd.GeoDataFrame): GeoDataFrame containing training data.
 
-    Returns:
-        None
-    """
-    # TO WORK ON !!!!
+#     Returns:
+#         None
+#     """
+#     # TO WORK ON !!!!
 
 
 
