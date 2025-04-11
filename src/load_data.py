@@ -99,6 +99,46 @@ def reproject(file, projection):
     return data_reprojected
 
 
+def resample_raster(raster_ds, target_resolution=None): # need optimization: if -> to be used for other imagery types (other than sentinel2)
+    """
+    Resample the raster dataset to a target resolution, or to the highest band resolution if target_resolution is None.
+
+    Args:
+        raster_ds (rioxarray.DataArray): Raster dataset to be resampled.
+        target_resolution (tuple): Target resolution in the form of (x_res, y_res).
+
+    Returns:
+        Resampled raster dataset.
+    """
+    if target_resolution is None:
+        ref_band = raster_ds.sel(band=4)
+        target_resolution  = ref_band.rio.resolution()
+        target_crs = ref_band.rio.crs
+
+        # Separate 10m and resample the rest
+        ten_meter_bands = [x for x in raster_ds.band.values if x in [2, 3, 4, 8]]
+        resampled_bands_list = []
+
+        for b in raster_ds.band.values:
+            band = raster_ds.sel(band=b)
+            if b in ten_meter_bands:
+                resampled_bands_list.append(band)
+            else:
+                resampled = band.rio.reproject(crs=target_crs, resolution=target_resolution, resampling=rioxarray.rio.warp.Resampling.bilinear)
+                resampled_bands_list.append(resampled)
+            
+        resampled_raster = xr.concat(resampled_bands_list, dim="band")
+        resampled_raster = resampled_raster.sortby("band") # just in case :p
+    
+    else:
+        crs = raster_ds.rio.crs
+        resampled_raster = raster_ds.rio.reproject(
+            crs=crs,
+            resolution=target_resolution,
+            resampling=rioxarray.rio.warp.Resampling.bilinear,
+            )
+
+    return resampled_raster
 
 def load_raster_data(raster_file_path: str):
     """
