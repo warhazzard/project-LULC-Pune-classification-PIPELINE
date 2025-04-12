@@ -2,10 +2,13 @@ import os
 import pandas as pd
 import numpy as np
 import rasterio
+import rasterio.enums
 from rasterio.merge import merge
 import geopandas as gpd
 import xarray as xr
 import rioxarray 
+import dask
+import gc
 
 xr.set_options(keep_attrs=True, display_expand_data=True)
 
@@ -77,26 +80,38 @@ def mosaic_rasters(*raster_files, output_file_path='mosaic.tif'):
     return None
 
 
-def reproject(file, projection):
+def reproject(file, projection, output_path):
     """
     Reprojects a raster (xarray.DataArray) or vector (GeoDataFrame) to a new CRS.
 
     Args:
-        file: rioxarray dataset
+        file: xarray.DataArray
         projection: EPSG code of the target projection
 
     Returns:
-        Reprojected rioxarray dataset
+        Save reprojected raster on disk or return Reprojected GeoDataFrame.
     """
 
-    if isinstance(file, rioxarray.DataArray):
-        data_reprojected = file.rio.reproject(f"EPSG:{projection}")
+    if isinstance(file, xr.DataArray):
+        file.rio.reproject(f"EPSG:{projection}", resolution=(10,-10), resampling=rasterio.enums.Resampling.bilinear).rio.to_raster(output_path, tiled=True, windowed=True, lock=False)
+
+        # output_bands = []
+        # for i in range(file.sizes["band"]):
+        #     band = file.isel(band=i)
+        #     band_reprojected = band.rio.reproject(f"EPSG:{projection}")
+        #     output_bands.append(band_reprojected)
+
+        # Combine reprojected bands back into one DataArray
+        # data_reprojected = xr.concat(output_bands, dim="band")
+
     elif isinstance(file, gpd.GeoDataFrame):
         data_reprojected = file.to_crs(epsg=projection)
+        print("Reprojection completed successfully.")
+        return data_reprojected
     else:
         raise TypeError("Unsupported input type. Must be xarray.DataArray or geopandas.GeoDataFrame")
-    
-    return data_reprojected
+    print("Reprojection completed successfully.")
+    return None
 
 
 def resample_raster(raster_ds, target_resolution=None): # need optimization: if -> to be used for other imagery types (other than sentinel2)
@@ -104,11 +119,11 @@ def resample_raster(raster_ds, target_resolution=None): # need optimization: if 
     Resample the raster dataset to a target resolution, or to the highest band resolution if target_resolution is None.
 
     Args:
-        raster_ds (rioxarray.DataArray): Raster dataset to be resampled.
+        raster_ds (xarray.DataArray): Raster dataset to be resampled.
         target_resolution (tuple): Target resolution in the form of (x_res, y_res).
 
     Returns:
-        Resampled raster dataset.
+        Resampled xarray.DataArray.
     """
     if target_resolution is None:
         ref_band = raster_ds.sel(band=4)
@@ -124,11 +139,16 @@ def resample_raster(raster_ds, target_resolution=None): # need optimization: if 
             if b in ten_meter_bands:
                 resampled_bands_list.append(band)
             else:
-                resampled = band.rio.reproject(crs=target_crs, resolution=target_resolution, resampling=rioxarray.rio.warp.Resampling.bilinear)
+                resampled = band.rio.reproject(crs=target_crs, resolution=target_resolution, resampling=rasterio.enums.Resampling.bilinear)
+                resampled = resampled.compute()
                 resampled_bands_list.append(resampled)
-            
+                del resampled
+                gc.collect()
+
         resampled_raster = xr.concat(resampled_bands_list, dim="band")
+        resampled_raster.rio.write_crs(target_crs, inplace=True)
         resampled_raster = resampled_raster.sortby("band") # just in case :p
+
     
     else:
         crs = raster_ds.rio.crs
@@ -140,7 +160,7 @@ def resample_raster(raster_ds, target_resolution=None): # need optimization: if 
 
     return resampled_raster
 
-def load_raster_data(raster_file_path: str):
+def load_raster_data(raster_file_path, chunks=False):
     """
     Load the input data. 
 
@@ -148,20 +168,22 @@ def load_raster_data(raster_file_path: str):
         raster_file_path (str): Path to the input data file - Geotiff.
 
     Returns:
-        rioxarry.Dataset object.
-    
+        rioxarry.DataArray object.
     """
     if not isinstance(raster_file_path, str):
         raise TypeError("raster_file_path must be a string")
     
     if not os.path.exists(raster_file_path):
         raise FileNotFoundError(f"File {raster_file_path} does not exist")
-
-    
+  
     # Load the raster data
     try:
-        raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True)
+      if chunks:
+        raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True, chunks="auto")
         print("raster image is loaded successfully as rioxarray.Dataset") 
+      else:
+        raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True)
+        print("raster image is loaded successfully as rioxarray.Dataset")
     except Exception as e:
         raise ValueError(f"Error loading raster data: {e}")
     
@@ -202,19 +224,25 @@ def load_training_data( training_data: str):
     return gdf, class_col
 
 
-# def visualize_data(raster_ds1, raster_ds2, gdf):
-#     """
-#     Visualize the raster data and training data.
+def show_metadata(raster_path):
+    """
+    Visualize the raster data and training data.
 
-#     Args:
-#         raster_ds1 (rioxarray.DataArray): First raster dataset.
-#         raster_ds2 (rioxarray.DataArray): Second raster dataset.
-#         gdf (gpd.GeoDataFrame): GeoDataFrame containing training data.
+    Args:
+        raster_path (raster path: str): Raster dataset.
 
-#     Returns:
-#         None
-#     """
-#     # TO WORK ON !!!!
+    Returns:
+        str: Metadata of the raster dataset.
+    """
+    with rioxarray.open_rasterio(raster_path) as src:
+      print(f"Dimensions: \n{src.dims}\n")
+      print(f"CRS: \n{src.rio.crs}\n")
+      print(f"Transform: \n{src.rio.transform()}\n")
+      print(f"Resolution: \n{src.rio.resolution()}\n")
+      print(f"{src.coords}\n")
+      print(f"Metadata: \n{src.coords['spatial_ref']}\n")
+
+    return None
 
 
 
