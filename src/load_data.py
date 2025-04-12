@@ -147,18 +147,19 @@ def resample_raster(raster_ds, target_resolution=None): # need optimization: if 
 
         resampled_raster = xr.concat(resampled_bands_list, dim="band")
         resampled_raster.rio.write_crs(target_crs, inplace=True)
-        resampled_raster = resampled_raster.sortby("band") # just in case :p
+        del resampled_raster
+        gc.collect()
 
     
     else:
         crs = raster_ds.rio.crs
-        resampled_raster = raster_ds.rio.reproject(
+        resampled_ras = raster_ds.rio.reproject(
             crs=crs,
             resolution=target_resolution,
             resampling=rioxarray.rio.warp.Resampling.bilinear,
             )
 
-    return resampled_raster
+    return resampled_ras
 
 def load_raster_data(raster_file_path, chunks=False):
     """
