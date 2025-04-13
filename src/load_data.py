@@ -80,20 +80,25 @@ def mosaic_rasters(*raster_files, output_file_path='mosaic.tif'):
     return None
 
 
-def reproject(file, projection, output_path):
+def reproject(file, projection, output_path=None):
     """
     Reprojects a raster (xarray.DataArray) or vector (GeoDataFrame) to a new CRS.
 
     Args:
-        file: xarray.DataArray
-        projection: EPSG code of the target projection
+        file (xarray.DataArray or geopandas.GeoDataFrame): Input data to reproject.
+        projection (int): EPSG code of the target projection.
+        output_path (str, optional): Path to save the reprojected raster (only for rasters).
 
     Returns:
-        Save reprojected raster on disk or return Reprojected GeoDataFrame.
+        Saves raster to disk if xarray.DataArray or 
+        geopandas.GeoDataFrame: The reprojected data.
     """
-
     if isinstance(file, xr.DataArray):
-        file.rio.reproject(f"EPSG:{projection}", resolution=(10,-10), resampling=rasterio.enums.Resampling.bilinear).rio.to_raster(output_path, tiled=True, windowed=True, lock=False)
+        if output_path is not None:
+            file.rio.reproject(f"EPSG:{projection}", resolution=(10,-10), resampling=rasterio.enums.Resampling.bilinear).rio.to_raster(output_path, tiled=True, windowed=True, lock=False)
+            return None
+        else:
+            raise ValueError("output_path must be provided for xarray.DataArray")
 
         # output_bands = []
         # for i in range(file.sizes["band"]):
@@ -105,13 +110,9 @@ def reproject(file, projection, output_path):
         # data_reprojected = xr.concat(output_bands, dim="band")
 
     elif isinstance(file, gpd.GeoDataFrame):
-        data_reprojected = file.to_crs(epsg=projection)
-        print("Reprojection completed successfully.")
-        return data_reprojected
+        return file.to_crs(epsg=projection)
     else:
         raise TypeError("Unsupported input type. Must be xarray.DataArray or geopandas.GeoDataFrame")
-    print("Reprojection completed successfully.")
-    return None
 
 
 def resample_raster(raster_ds, target_resolution=None): # need optimization: if -> to be used for other imagery types (other than sentinel2)
@@ -191,16 +192,18 @@ def load_raster_data(raster_file_path, chunks=False):
     return raster_ds
 
 
-def load_training_data( training_data: str):
+def load_training_data( training_data, class_name=None):
     """
-    Load the training data. 
+    Load the training data and column .
 
     Args:
         training_data (str): Path to the training data file - GeoJson.
+        class_name (str, optional): The name of the column representing land cover classes.
 
     Returns:
-        gpd.GeoDataFrame object.
-    
+        Tuple - 
+        gpd.GeoDataFrame: The loaded geospatial data.
+        str or None: The name of the class column, if found.
     """
     
     if not isinstance(training_data, str):
@@ -208,20 +211,25 @@ def load_training_data( training_data: str):
     if not os.path.exists(training_data):
         raise FileNotFoundError(f"File {training_data} does not exist")
 
-    # Load the training data
     try:
         gdf = gpd.read_file(training_data)
-        if "class" not in gdf.columns and "Class" not in gdf.columns:
-            class_col = None 
+        class_col = None
+        if class_name is not None:    
+            if class_name in gdf.columns:
+                class_col = class_name
+            else:
+                raise ValueError(f"Class name {class_name} not found in GeoDataFrame columns")
+        else:
             for col in gdf.columns:
                 if col.lower() in ['class', 'classname', 'lulc', 'landcover', 'land_cover', 'land_use', 'category']:
                     class_col = col
                     break
             if class_col is None:
-                print("Warning: No class column found in shapefile. Please ensure your shapefile has a column indicating land cover classes.")
+                  raise ValueError("No class column found in shapefile. Please ensure your shapefile has a column indicating land cover classes.")
+    
     except Exception as e:
         raise ValueError(f"Error loading training data: {e}")
-    
+
     return gdf, class_col
 
 
