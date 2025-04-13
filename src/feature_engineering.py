@@ -5,6 +5,8 @@ import rasterio
 import geopandas as gpd
 import xarray as xr
 import rioxarray
+import gc
+import dask
 
 xr.set_options(keep_attrs=True, display_expand_data=True)
 
@@ -25,7 +27,9 @@ def calculate_indices(raster_ds):
     """
     # Create a copy of the input dataset
     result_ds = raster_ds.copy(deep=True)
-    
+    del raster_ds
+    gc.collect()
+
     try:
         # Normalized Difference Vegetation Index (NDVI)
         nir = result_ds['B8'].astype(float)
