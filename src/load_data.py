@@ -181,7 +181,7 @@ def load_raster_data(raster_file_path, chunks=False):
     # Load the raster data
     try:
       if chunks:
-        raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True, chunks={"band": 1, "x": "auto", "y": "auto"})
+        raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True, chunks={"band": 1})
         print("raster image is loaded successfully as rioxarray.Dataset") 
       else:
         raster_ds = rioxarray.open_rasterio(raster_file_path, masked=True)
