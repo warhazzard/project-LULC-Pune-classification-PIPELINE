@@ -9,3 +9,4 @@ seaborn>=0.13.2
 scikit-learn>=1.4.1.post1
 pyproj>=3.6.1
 shapely>=2.0.2
+dask>=2023.2.0
