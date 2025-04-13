@@ -29,7 +29,7 @@ def calculate_indices(raster_ds):
     result_ds = raster_ds.copy(deep=True)
     del raster_ds
     gc.collect()
-
+    
     try:
         # Normalized Difference Vegetation Index (NDVI)
         nir = result_ds['B8'].astype(float)
