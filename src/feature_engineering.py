@@ -117,12 +117,12 @@ def calculate_indices(raster_ds, output=None):
         return None
 
 
-def extract_training_samples(raster_ds1, raster_ds2, gdf, class_col):
+def extract_training_samples(raster_list, gdf, class_col):
     """
     Extract training samples from the raster data using the provided GeoDataFrame.
     
     Args:
-        raster_ds (rioxarray.Dataset): The raster data as a rioxarray.Dataset.
+        raster_ds (rioxarray.Dataset - list): The list of raster data (rioxarray.Dataset).
         gdf (gpd.GeoDataFrame): The training data as a GeoDataFrame.
         class_col (str): The name of the column in the GeoDataFrame that contains the class labels.
     
@@ -143,18 +143,18 @@ def extract_training_samples(raster_ds1, raster_ds2, gdf, class_col):
         class_polygons = gdf[gdf[class_col] == class_value]
 
         clipped_list = []
-        for raster in ([raster_ds1, raster_ds2]):
+        for raster in raster_list:
             # Clip the raster data using the polygons
             clipped = raster.rio.clip(class_polygons.geometry.values, class_polygons.crs, all_touched=True)
             clipped_list.append(clipped)
 
         # Extract and store the pixels from images from each band, in df with their associated class
         for raster_idx, raster in enumerate(clipped_list):
-            time_suffix = f"_T{raster_idx+1}"
+            # time_suffix = f"_T{raster_idx+1}"
 
             for band in raster['band']:
                 band_base = str(band.values)
-                band_name = band_base + time_suffix
+                band_name = band_base # + time_suffix
 
                 single_band = raster.sel(band=band)
                 values = single_band.values.flatten()
