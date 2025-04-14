@@ -108,7 +108,7 @@ def calculate_indices(raster_ds, output=None):
         print("check-8")
 
         if output is not None:
-            result_ds.rio.to_raster(output) # tiled=True, windowed=True, lock=False
+            result_ds.rio.to_raster(output, driver="GTiff") # tiled=True, windowed=True, lock=False
         else:
             return result_ds
 
