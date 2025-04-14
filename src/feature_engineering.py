@@ -164,13 +164,13 @@ def extract_training_samples(raster_list, gdf, class_col):
 
                 # Append to band column in df
                 df[band_name] = pd.concat([pd.Series(values), df.get(band_name, pd.Series(dtype=float))], ignore_index=True)
-                df['label'] = pd.concat([df.get('label', pd.Series(dtype=type(class_value))), pd.Series([class_value] * len(values))], ignore_index=True)
+                df['label'] = pd.concat([pd.Series([class_value] * len(values)), df.get('label', pd.Series(dtype=type(class_value)))], ignore_index=True)
                 print(f"Extracted {len(values)} pixels for class {class_value} from band {band}")
                 del single_band
                 gc.collect()
 
         final_df = pd.concat([final_df, df], ignore_index=True)
-        
+
     return final_df
     
     
