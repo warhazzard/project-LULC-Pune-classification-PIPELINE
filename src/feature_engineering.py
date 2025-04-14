@@ -11,78 +11,107 @@ import dask
 xr.set_options(keep_attrs=True, display_expand_data=True)
 
 
-def calculate_indices(raster_ds):
+def calculate_indices(raster_ds, output=None):
     """
     Calculate spectral indices from Sentinel-2 bands.
-    
+
     Parameters:
     -----------
     raster_ds : xarray.Dataset
         Image dataset containing Sentinel-2 bands
-        
+    output : str or None
+        If specified, will save the output to the provided path.
+
     Returns:
     --------
     xarray.Dataset
         Dataset with original bands and added spectral indices
     """
-    # Create a copy of the input dataset
+    print("check-1")
     result_ds = raster_ds.copy(deep=True)
     del raster_ds
     gc.collect()
-    
-    try:
-        # Normalized Difference Vegetation Index (NDVI)
-        nir = result_ds['B8'].astype(float)
-        red = result_ds['B4'].astype(float)
+    print("check-2")
 
-        ndvi = (nir - red) / (nir + red)
-        ndvi = ndvi.clip(min=-1, max=1)
+    try:
+        blue = result_ds.sel(band=2)
+        green = result_ds.sel(band=3)
+        red = result_ds.sel(band=4)
+        nir = result_ds.sel(band=8)
+        swir = result_ds.sel(band=11)
+        print("check-3")
+
+        # NDVI
+        ndvi = ((nir - red) / (nir + red)).clip(min=-1, max=1).fillna(0)
         ndvi.name = "NDVI"
         ndvi.attrs["long_name"] = "Normalized Difference Vegetation Index"
         ndvi.attrs["units"] = "unitless"
-        result_ds['NDVI'] = ndvi.where(~np.isnan(ndvi), 0)
-        
-        # Soil Adjusted Vegetation Index (SAVI)
-        # L is a soil brightness correction factor, usually 0.5
-        L = 0.5
-        savi = ((nir - red) / (nir + red + L)) * (1 + L)
-        savi = savi.clip(min=-1, max=1)
+        ndvi = ndvi.expand_dims(dim='band')
+        ndvi['band'] = [result_ds.sizes['band'] + 1]
+        result_ds = xr.concat([result_ds, ndvi], dim='band')
+        result_ds.attrs["long_name"] = list(result_ds.attrs.get("long_name", [])) + ["NDVI"]
+        del ndvi
+        gc.collect()
+        print("check-4")
+
+        # SAVI
+        L = 0.5  # SAVI soil brightness correction
+        savi = (((nir - red) / (nir + red + L)) * (1 + L)).clip(min=-1, max=1).fillna(0)
         savi.name = "SAVI"
         savi.attrs["long_name"] = "Soil Adjusted Vegetation Index"
         savi.attrs["units"] = "unitless"
-        result_ds['SAVI'] = savi.where(~np.isnan(savi), 0)
-        
-        # Modified Normalized Difference Water Index (MNDWI)
-        green = result_ds['B3'].astype(float)
-        swir = result_ds['B11'].astype(float)
+        savi = savi.expand_dims(dim='band')
+        savi['band'] = [result_ds.sizes['band'] + 1]
+        result_ds = xr.concat([result_ds, savi], dim='band')
+        result_ds.attrs["long_name"] = list(result_ds.attrs.get("long_name", [])) + ["SAVI"]
+        del savi
+        gc.collect()
+        print("check-5")
 
-        mndwi = (green - swir) / (green + swir)
-        mndwi = mndwi.clip(min=-1, max=1)
+        # MNDWI
+        mndwi = ((green - swir) / (green + swir)).clip(min=-1, max=1).fillna(0)
         mndwi.name = "MNDWI"
         mndwi.attrs["long_name"] = "Modified Normalized Difference Water Index"
         mndwi.attrs["units"] = "unitless"
-        result_ds['MNDWI'] = mndwi.where(~np.isnan(mndwi), 0)
-        
-        # Normalized Difference Built-up Index (NDBI)
-        ndbi = (swir - nir) / (swir + nir)
-        ndbi = ndbi.clip(min=-1, max=1)
+        mndwi = mndwi.expand_dims(dim='band')
+        mndwi['band'] = [result_ds.sizes['band'] + 1]
+        result_ds = xr.concat([result_ds, mndwi], dim='band')
+        result_ds.attrs["long_name"] = list(result_ds.attrs.get("long_name", [])) + ["MNDWI"]
+        del mndwi
+        gc.collect()
+        print("check-6")
+
+        # NDBI
+        ndbi = ((swir - nir) / (swir + nir)).clip(min=-1, max=1).fillna(0)
         ndbi.name = "NDBI"
         ndbi.attrs["long_name"] = "Normalized Difference Built-up Index"
         ndbi.attrs["units"] = "unitless"
-        result_ds['NDBI'] = ndbi.where(~np.isnan(ndbi), 0)
-        
-        # Bare Soil Index (BSI)
-        blue = result_ds['B2'].astype(float)
+        ndbi = ndbi.expand_dims(dim='band')
+        ndbi['band'] = [result_ds.sizes['band'] + 1]
+        result_ds = xr.concat([result_ds, ndbi], dim='band')
+        result_ds.attrs["long_name"] = list(result_ds.attrs.get("long_name", [])) + ["NDBI"]
+        del ndbi
+        gc.collect()
+        print("check-7")
 
-        bsi = ((swir + red) - (nir + blue)) / ((swir + red) + (nir + blue))
-        bsi = bsi.clip(min=-1, max=1)
+        # BSI
+        bsi = (((swir + red) - (nir + blue)) / ((swir + red) + (nir + blue))).clip(min=-1, max=1).fillna(0)
         bsi.name = "BSI"
         bsi.attrs["long_name"] = "Bare Soil Index"
         bsi.attrs["units"] = "unitless"
-        result_ds['BSI'] = bsi.where(~np.isnan(bsi), 0)
+        bsi = bsi.expand_dims(dim='band')
+        bsi['band'] = [result_ds.sizes['band'] + 1]
+        result_ds = xr.concat([result_ds, bsi], dim='band')
+        result_ds.attrs["long_name"] = list(result_ds.attrs.get("long_name", [])) + ["BSI"]
+        del bsi
+        gc.collect()
+        print("check-8")
 
-        return result_ds
-    
+        if output is not None:
+            result_ds.rio.to_raster(output) # tiled=True, windowed=True, lock=False
+        else:
+            return result_ds
+
     except Exception as e:
         print(f"Error calculating indices: {e}")
         return None
