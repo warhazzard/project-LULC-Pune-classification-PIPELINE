@@ -130,7 +130,7 @@ def extract_training_samples(raster_list, gdf, class_col):
         df (pd.DataFrame): A DataFrame containing the extracted training samples.
     """
     # Create a df to store the training samples
-    df = pd.DataFrame()
+    final_df = pd.DataFrame()
 
     # Identify and loop through unique classes in the GeoDataFrame
     unique_classes = gdf[class_col].unique()
@@ -151,20 +151,26 @@ def extract_training_samples(raster_list, gdf, class_col):
         # Extract and store the pixels from images from each band, in df with their associated class
         for raster_idx, raster in enumerate(clipped_list):
             # time_suffix = f"_T{raster_idx+1}"
+            bands = raster['band']
 
-            for band in raster['band']:
-                band_base = str(band.values)
-                band_name = band_base # + time_suffix
+            df = pd.DataFrame()
+            for band in bands.values:
+                band_name = str(band)
+                # band_base = band_base # + time_suffix
 
                 single_band = raster.sel(band=band)
                 values = single_band.values.flatten()
                 values = values[~np.isnan(values)]
 
                 # Append to band column in df
-                df[band_name] = pd.concat([df.get(band_name, pd.Series(dtype=float)), pd.Series(values)], ignore_index=True)
+                df[band_name] = pd.concat([pd.Series(values), df.get(band_name, pd.Series(dtype=float))], ignore_index=True)
                 df['label'] = pd.concat([df.get('label', pd.Series(dtype=type(class_value))), pd.Series([class_value] * len(values))], ignore_index=True)
                 print(f"Extracted {len(values)} pixels for class {class_value} from band {band}")
-    
-    return df
+                del single_band
+                gc.collect()
+
+        final_df = pd.concat([final_df, df], ignore_index=True)
+        
+    return final_df
     
     
