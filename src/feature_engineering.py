@@ -42,7 +42,7 @@ def calculate_indices(raster_ds, output=None):
         print("check-3")
 
         # NDVI
-        ndvi = ((nir - red) / (nir + red)).clip(min=-1, max=1).fillna(0)
+        ndvi = ((nir - red) / (nir + red)).clip(min=-1, max=1)
         ndvi.name = "NDVI"
         ndvi.attrs["long_name"] = "Normalized Difference Vegetation Index"
         ndvi.attrs["units"] = "unitless"
@@ -56,7 +56,7 @@ def calculate_indices(raster_ds, output=None):
 
         # SAVI
         L = 0.5  # SAVI soil brightness correction
-        savi = (((nir - red) / (nir + red + L)) * (1 + L)).clip(min=-1, max=1).fillna(0)
+        savi = (((nir - red) / (nir + red + L)) * (1 + L)).clip(min=-1, max=1)
         savi.name = "SAVI"
         savi.attrs["long_name"] = "Soil Adjusted Vegetation Index"
         savi.attrs["units"] = "unitless"
@@ -69,7 +69,7 @@ def calculate_indices(raster_ds, output=None):
         print("check-5")
 
         # MNDWI
-        mndwi = ((green - swir) / (green + swir)).clip(min=-1, max=1).fillna(0)
+        mndwi = ((green - swir) / (green + swir)).clip(min=-1, max=1)
         mndwi.name = "MNDWI"
         mndwi.attrs["long_name"] = "Modified Normalized Difference Water Index"
         mndwi.attrs["units"] = "unitless"
@@ -82,7 +82,7 @@ def calculate_indices(raster_ds, output=None):
         print("check-6")
 
         # NDBI
-        ndbi = ((swir - nir) / (swir + nir)).clip(min=-1, max=1).fillna(0)
+        ndbi = ((swir - nir) / (swir + nir)).clip(min=-1, max=1)
         ndbi.name = "NDBI"
         ndbi.attrs["long_name"] = "Normalized Difference Built-up Index"
         ndbi.attrs["units"] = "unitless"
@@ -95,7 +95,7 @@ def calculate_indices(raster_ds, output=None):
         print("check-7")
 
         # BSI
-        bsi = (((swir + red) - (nir + blue)) / ((swir + red) + (nir + blue))).clip(min=-1, max=1).fillna(0)
+        bsi = (((swir + red) - (nir + blue)) / ((swir + red) + (nir + blue))).clip(min=-1, max=1)
         bsi.name = "BSI"
         bsi.attrs["long_name"] = "Bare Soil Index"
         bsi.attrs["units"] = "unitless"
