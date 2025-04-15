@@ -231,6 +231,8 @@ def load_trained_model(model_path):
         return model
     else:
         raise FileNotFoundError(f"Model file not found at {model_path}")
+    
+
 
 # tree_depths = [estimator.tree_.max_depth for estimator in rf_classifier.estimators_]
 # print("Max depth per tree (sample):", tree_depths[:10])  
