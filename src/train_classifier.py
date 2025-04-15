@@ -7,6 +7,7 @@ import xarray as xr
 import rioxarray
 import matplotlib.pyplot as plt
 import seaborn as sns
+import joblib
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
@@ -172,7 +173,7 @@ def evaluate_best_model(best_model, X_test, y_test, plot_confusion_matrix=True):
     """
     y_pred = best_model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    confusion_matrix = confusion_matrix(y_test, y_pred)
+    conf_mat = confusion_matrix(y_test, y_pred)
     classification_rep = classification_report(y_test, y_pred)
 
     print(f"Accuracy: {accuracy:.4f}")
@@ -181,12 +182,13 @@ def evaluate_best_model(best_model, X_test, y_test, plot_confusion_matrix=True):
 
     if plot_confusion_matrix:
         fig, ax = plt.subplots(figsize=(8, 8))
-        sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', ax=ax)
+        sns.heatmap(conf_mat, annot=True, fmt='d', cmap='Blues', ax=ax)
         ax.set_title('Confusion Matrix')
         ax.set_xlabel('Predicted Label')
         ax.set_ylabel('True Label')
         plt.tight_layout()
         plt.show()
+        
 
     metrics = {
         'accuracy': accuracy,
@@ -195,3 +197,43 @@ def evaluate_best_model(best_model, X_test, y_test, plot_confusion_matrix=True):
     }
 
     return metrics
+
+def save_trained_model(model, output_path):
+    """
+    Save the trained model to a file.
+
+    Args:
+        model (Classifier): Trained Random Forest classifier - '.pkl'.
+        output_path (str): Path to save the model.
+    
+    Returns: 
+        None
+    """
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    joblib.dump(model, output_path)
+    print(f"Model saved to {output_path}")
+    return None
+
+
+def load_trained_model(model_path):
+    """
+    Load a trained model from a file.
+
+    Args:
+        model_path (str): Path to the saved model.
+
+    Returns:
+        model (Classifier): Loaded Random Forest classifier '.pkl'.
+    """
+    if os.path.exists(model_path):
+        model = joblib.load(model_path)
+        print(f"Model loaded from {model_path}")
+        return model
+    else:
+        raise FileNotFoundError(f"Model file not found at {model_path}")
+
+# tree_depths = [estimator.tree_.max_depth for estimator in rf_classifier.estimators_]
+# print("Max depth per tree (sample):", tree_depths[:10])  
+# print("Average tree depth:", np.mean(tree_depths))
+# print("Max tree depth:", np.max(tree_depths))
+# print("Min tree depth:", np.min(tree_depths))
