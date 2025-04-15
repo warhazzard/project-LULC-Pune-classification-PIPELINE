@@ -5,7 +5,7 @@ import rasterio
 import geopandas as gpd
 import xarray as xr
 import rioxarray
-from matplotlib.pyplot import plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
@@ -56,7 +56,7 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
     return rf_classifier, X_train, X_test, y_train, y_test, accuracy
 
 
-def get_feature_importance(model, df):
+def get_feature_importance(model, df, output_path=None):
     """
     Get feature importance from the trained Random Forest model.
     
@@ -72,7 +72,7 @@ def get_feature_importance(model, df):
     
     # Create a DataFrame for better visualization
     feature_importance = pd.DataFrame({
-        'Feature': df.columns[:-1],
+        'Feature': df.drop(columns='label').columns,
         'Importance': importances
     })
     feature_importance = feature_importance.sort_values('Importance', ascending=False)
@@ -86,6 +86,11 @@ def get_feature_importance(model, df):
     
     plt.tight_layout()
 
+    if output_path is not None:
+        os.makedirs(output_path, exist_ok=True)
+        feature_importance.to_csv(f'{output_path}feature_importance.csv', index=False)
+        fig.savefig(f'{output_path}feature_importance_plot.png', dpi=300)
+    
     return fig, feature_importance
 
 
@@ -105,11 +110,11 @@ def get_max_safe_folds(df, min_samples_per_fold=100):
     max_folds = rarest_class_count // min_samples_per_fold
     
     if max_folds < 3:
-        print(f"Class counts: {class_counts}")
+        print(f"Class counts: {class_counts}\n")
         raise ValueError(f"Not enough samples in the rarest class to create {min_samples_per_fold} samples per fold.")
     else:
         print(f"Class counts: {class_counts}")
-        print(f"Max recommended folds: {max_folds}")
+        print(f"\nMax recommended folds: {max_folds}")
         max_safe_folds = max_folds
     
     return max_safe_folds, class_counts
