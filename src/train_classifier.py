@@ -262,7 +262,8 @@ def classify_raster(model, raster_ds, output_path=None):
 
     # Initialize the classification result array and proceed to classify
     classification = np.zeros(height * width, dtype=np.uint8)
-    classification[valid_mask] = model.predict(flatten_bands[valid_mask])
+    flatten_df = pd.DataFrame(flatten_bands[valid_mask], columns=model.feature_names_in_)
+    classification[valid_mask] = model.predict(flatten_df)
     classified_image = classification.reshape(height, width)
 
     # Predict with the model
