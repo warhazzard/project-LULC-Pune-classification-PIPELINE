@@ -232,7 +232,47 @@ def load_trained_model(model_path):
     else:
         raise FileNotFoundError(f"Model file not found at {model_path}")
     
+def classify_raster(model, raster_ds, output_path=None):
+    """
+    Classify a raster using the trained model.
 
+    Args:
+        model (RandomForestClassifier): Trained Random Forest classifier.
+        raster_ds (rioxarray.DataArray): Input multi-band raster data.
+        output_path (str): Path to save the classified raster.
+
+    Returns:
+        None (if output_path is given) or classified_da (rioxarray.DataArray): Classified raster as a DataArray.
+    """
+    bands = raster_ds['band'].values
+
+    bands_array = []
+    for band in bands:
+        bands_array.append(raster_ds.sel(band=band).values)
+
+    band_stack = np.stack(bands_array, axis=0)
+    height, width = band_stack.shape[1], band_stack.shape[2]
+    flatten_bands = band_stack.reshape(band_stack.shape[0], -1).T  
+
+    # Create a mask for valid pixels - filtering out values other specified in condition and avoid breaking up the classifier results
+    valid_mask = np.all(flatten_bands > 0, axis=1)  
+
+    # Initialize the classification result array and proceed to classify
+    classification = np.zeros(height * width, dtype=np.uint8)
+    classification[valid_mask] = model.predict(flatten_bands[valid_mask])
+    classified_image = classification.reshape(height, width)
+
+    classified_da = rioxarray.DataArray(classified_image, dims=["y", "x"], coords={"y": raster_ds.y, "x": raster_ds.x})
+    classified_da.rio.write_crs(raster_ds.rio.crs, inplace=True)
+
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        classified_da.rio.to_raster(output_path)
+        print(f"Classified raster saved to {output_path}")
+        return None
+    
+    return classified_da
+    
 
 # tree_depths = [estimator.tree_.max_depth for estimator in rf_classifier.estimators_]
 # print("Max depth per tree (sample):", tree_depths[:10])  
