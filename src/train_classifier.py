@@ -261,24 +261,23 @@ def classify_raster(model, raster_ds, output_path=None):
     valid_mask = np.all(flatten_bands > 0, axis=1)  
 
     # Initialize the classification result array and proceed to classify
-    # classification = np.zeros(height * width, dtype=np.uint8)
-    # classification[valid_mask] = model.predict(flatten_bands[valid_mask])
-    # classified_image = classification.reshape(height, width)
-
-    # Predict with the model
-    predicted_codes = model.predict(flatten_bands) 
     classification = np.zeros(height * width, dtype=np.uint8)
-    classification[valid_mask] = predicted_codes[valid_mask]
+    classification[valid_mask] = model.predict(flatten_bands[valid_mask])
     classified_image = classification.reshape(height, width)
 
-    classified_da = rioxarray.DataArray(classified_image, dims=["y", "x"], coords={"y": raster_ds.y, "x": raster_ds.x})
+    # Predict with the model
+    # predicted_codes = model.predict(flatten_bands) 
+    # classification = np.zeros(height * width, dtype=np.uint8)
+    # classification[valid_mask] = predicted_codes[valid_mask]
+    # classified_image = classification.reshape(height, width)
+
+    classified_da = xr.DataArray(classified_image, dims=["y", "x"], coords={"y": raster_ds.y, "x": raster_ds.x})
     classified_da.rio.write_crs(raster_ds.rio.crs, inplace=True)
 
     if output_path is not None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         classified_da.rio.to_raster(output_path)
         print(f"Classified raster saved to {output_path}")
-        return None
     
     return classified_da
     
