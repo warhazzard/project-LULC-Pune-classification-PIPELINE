@@ -35,8 +35,17 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
         accuracy (float): Accuracy of the model on the test set.
     
     """
-    X = df.drop(columns=['label'])
-    y = df['label']
+    n_per_class = 10000 # or df['label'].value_counts().min()
+
+    balanced_df = pd.concat([
+        df[df['label'] == 'Barren'].sample(n_per_class, random_state=42),
+        df[df['label'] == 'Water'].sample(n_per_class, random_state=42),
+        df[df['label'] == 'Builtup'].sample(n_per_class, random_state=42),
+        df[df['label'] == 'Vegetation'].sample(n_per_class, random_state=42)
+    ])
+
+    X = balanced_df.drop(columns=['label'])
+    y = balanced_df['label']
     le = LabelEncoder()
     y_encoded = le.fit_transform(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=test_size, stratify=y, random_state=random_state)
@@ -260,10 +269,15 @@ def classify_raster(model, raster_ds, output_path=None):
     # Create a mask for valid pixels - filtering out values other specified in condition and avoid breaking up the classifier results
     valid_mask = np.all(flatten_bands > 0, axis=1)  
 
+    # valid_mask = np.all(flatten_bands > 0, axis=1)
+    # flatten_df = pd.DataFrame(flatten_bands[valid_mask], columns=model.feature_names_in_)
+    # classification[valid_mask] = model.predict(flatten_df)
+    # Initialize the classification result array and proceed to classify
+
     # Initialize the classification result array and proceed to classify
     classification = np.zeros(height * width, dtype=np.uint8)
-    flatten_df = pd.DataFrame(flatten_bands[valid_mask], columns=model.feature_names_in_)
-    classification[valid_mask] = model.predict(flatten_df)
+    flatten_df = pd.DataFrame(flatten_bands, columns=model.feature_names_in_)
+    classification = model.predict(flatten_df)
     classified_image = classification.reshape(height, width)
 
     # Predict with the model
@@ -282,6 +296,24 @@ def classify_raster(model, raster_ds, output_path=None):
     
     return classified_da
     
+
+# import matplotlib.colors as mcolors
+# # classified_2019.plot()
+# # Define class labels and colors
+# classes = ['Barren', 'Builtup', 'Vegetation', 'Water']
+# colors = ['#e0c3a1', '#d7191c', '#1a9641', '#2b83ba']  
+# cmap = mcolors.ListedColormap(colors)
+# bounds = [0, 1, 2, 3, 4]
+# norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
+# # Plot
+# plt.figure(figsize=(10, 8))
+# im = plt.imshow(classified_2019.values, cmap=cmap, norm=norm)
+# cbar = plt.colorbar(im, ticks=[0.5, 1.5, 2.5, 3.5])
+# cbar.ax.set_yticklabels(classes)
+# plt.title("Classified LULC")
+# plt.axis('off')
+# plt.show()
 
 # tree_depths = [estimator.tree_.max_depth for estimator in rf_classifier.estimators_]
 # print("Max depth per tree (sample):", tree_depths[:10])  
