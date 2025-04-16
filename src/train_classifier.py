@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_sc
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
 
 xr.set_options(keep_attrs=True, display_expand_data=True)
 
@@ -36,7 +37,9 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
     """
     X = df.drop(columns=['label'])
     y = df['label']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=y, random_state=random_state)
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=test_size, stratify=y, random_state=random_state)
 
     # Train the initial Random Forest classifier
     rf_classifier = RandomForestClassifier(
@@ -54,7 +57,7 @@ def initialize_random_forest_classifier(df, test_size=0.2, random_state=42):
     y_pred = rf_classifier.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
-    return rf_classifier, X_train, X_test, y_train, y_test, accuracy
+    return rf_classifier, X_train, X_test, y_train, y_test, accuracy, le.classes_
 
 
 def get_feature_importance(model, df, output_path=None):
@@ -258,8 +261,14 @@ def classify_raster(model, raster_ds, output_path=None):
     valid_mask = np.all(flatten_bands > 0, axis=1)  
 
     # Initialize the classification result array and proceed to classify
+    # classification = np.zeros(height * width, dtype=np.uint8)
+    # classification[valid_mask] = model.predict(flatten_bands[valid_mask])
+    # classified_image = classification.reshape(height, width)
+
+    # Predict with the model
+    predicted_codes = model.predict(flatten_bands) 
     classification = np.zeros(height * width, dtype=np.uint8)
-    classification[valid_mask] = model.predict(flatten_bands[valid_mask])
+    classification[valid_mask] = predicted_codes[valid_mask]
     classified_image = classification.reshape(height, width)
 
     classified_da = rioxarray.DataArray(classified_image, dims=["y", "x"], coords={"y": raster_ds.y, "x": raster_ds.x})
