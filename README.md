@@ -20,40 +20,38 @@ A modular pipeline for **Land Use Land Cover (LULC)** classification using **mul
 
 ### Model Evaluation Report - 2019 image
 
-#### **Accuracy:** `0.9872`
+#### **Accuracy:** `0.9820`
 
 ---
 
 #### Confusion Matrix
 
-|               | Predicted: Barren | Predicted: Builtup | Predicted: Vegetation | Predicted: Water |
-|---------------|------------------:|--------------------:|-----------------------:|------------------:|
-| **Actual: Barren**    | 88627 | 181 | 140 | 182 |
-| **Actual: Builtup**   | 203   | 19538 | 17  | 0   |
-| **Actual: Vegetation**| 114   | 14    | 5593 | 1   |
-| **Actual: Water**     | 1004  | 11    | 8    | 30753 |
+|                   | Predicted: Barren | Predicted: Built-up | Predicted: Vegetation | Predicted: Water |
+|-------------------|------------------:|--------------------:|----------------------:|-----------------:|
+| **Actual: Barren**     | 1950 | 9    | 21   | 20   |
+| **Actual: Built-up**   | 9    | 1985 | 6    | 0    |
+| **Actual: Vegetation** | 3    | 1    | 1996 | 0    |
+| **Actual: Water**      | 73   | 1    | 1    | 1925 |
 
 ---
 
 #### Classification Report
 
-| Class        | Precision | Recall | F1-Score | Support |
-|--------------|-----------|--------|----------|---------|
-| **Barren**     | 0.99      | 0.99   | 0.99     | 89130   |
-| **Builtup**    | 0.99      | 0.99   | 0.99     | 19758   |
-| **Vegetation** | 0.97      | 0.98   | 0.97     | 5722    |
-| **Water**      | 0.99      | 0.97   | 0.98     | 31776   |
+| Class       | Precision | Recall | F1-Score | Support |
+|:-----------:|:---------:|:------:|:--------:|:-------:|
+| Barren      | 0.96      | 0.97   | 0.97     | 2000    |
+| Built-up    | 0.99      | 0.99   | 0.99     | 2000    |
+| Vegetation  | 0.99      | 1.00   | 0.99     | 2000    |
+| Water       | 0.99      | 0.96   | 0.98     | 2000    |
 
 ---
 
 #### Overall Stats
 
-| Metric         | Score |
-|----------------|-------|
-| **Accuracy**       | 0.99  |
-| **Macro Avg (F1)** | 0.98  |
-| **Weighted Avg (F1)** | 0.99  |
-| **Total Samples** | 146386 |
+- **Overall Accuracy:** 0.9820
+- **Macro Average F1-Score:** 0.98
+- **Weighted Average F1-Score:** 0.98
+- **Total Samples:** 8000
 
 ---
 
