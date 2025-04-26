@@ -7,13 +7,15 @@ A modular pipeline for **Land Use Land Cover (LULC)** classification using **mul
 
 ---
 
-## 🚀 Current Status
+## Current Status
 
 - Built a basic pipeline for LULC classification.
 - Achieved ~98% test accuracy using Random Forest on spectral bands.
 - Current outputs include model predictions, evaluation metrics, and prediction maps.
 
 ---
+## Results on Sentinel-2 L2A SR - Pune Region
+<img src="https://github.com/warhazzard/project-LULC-Pune-classification-PIPELINE/blob/main/outputs/classification_2019.png?raw=true">
 
 ## 📈 Key Features
 
@@ -24,7 +26,7 @@ A modular pipeline for **Land Use Land Cover (LULC)** classification using **mul
 
 ---
 
-## 🔧 Planned Enhancements
+## Planned Enhancements
 
 - Add **spatial/contextual features** (texture, edge information).
 - **Refine class labels** (e.g., separate agriculture, built-up, barren).
