@@ -15,7 +15,10 @@ A modular pipeline for **Land Use Land Cover (LULC)** classification using **mul
 
 ---
 ## Results on Sentinel-2 L2A SR - Pune Region
+
 <img src="https://github.com/warhazzard/project-LULC-Pune-classification-PIPELINE/blob/main/outputs/classification_2019.png?raw=true">
+
+---
 
 ## 📈 Key Features
 
